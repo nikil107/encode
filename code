@@ -1,0 +1,47 @@
+from flask import Flask, render_template, request, redirect
+import sqlite3
+import datetime
+
+app = Flask(__name__)
+
+# SQLite database initialization
+db = sqlite3.connect('survey_responses.db')
+cursor = db.cursor()
+cursor.execute('''
+    CREATE TABLE IF NOT EXISTS survey_responses (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        email TEXT,
+        timestamp TEXT,
+        nps_score INTEGER,
+        additional_comments TEXT
+    )
+''')
+db.commit()
+db.close()
+
+@app.route('/')
+def index():
+    return render_template('index.html')
+
+@app.route('/submit', methods=['POST'])
+def submit():
+    email = request.form['email']
+    nps_score = int(request.form['nps_score'])
+    additional_comments = request.form['additional_comments']
+
+    # Securely store survey responses in the SQLite database
+    db = sqlite3.connect('survey_responses.db')
+    cursor = db.cursor()
+    cursor.execute('INSERT INTO survey_responses (email, timestamp, nps_score, additional_comments) VALUES (?, ?, ?, ?)',
+                   (email, datetime.datetime.now().isoformat(), nps_score, additional_comments))
+    db.commit()
+    db.close()
+
+    return redirect('/success')
+
+@app.route('/success')
+def success():
+    return "Thank you for your feedback!"
+
+if __name__ == '__main__':
+    app.run(debug=True, ssl_context='adhoc')
